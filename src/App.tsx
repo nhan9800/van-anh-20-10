@@ -72,7 +72,7 @@ function playLoveChord(context: AudioContext, master: GainNode, chord: number[],
     oscillator.type = noteIndex === 3 ? 'triangle' : 'sine';
     oscillator.frequency.setValueAtTime(frequency, start);
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.linearRampToValueAtTime(noteIndex === 3 ? 0.005 : 0.011, start + 0.8);
+    gain.gain.linearRampToValueAtTime(noteIndex === 3 ? 0.02 : 0.05, start + 0.8);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + 4.9);
     oscillator.connect(gain).connect(master);
     oscillator.start(start);
@@ -85,7 +85,7 @@ function playLoveChord(context: AudioContext, master: GainNode, chord: number[],
   lead.type = 'sine';
   lead.frequency.setValueAtTime(melody, start + 1.05);
   leadGain.gain.setValueAtTime(0.0001, start + 1.05);
-  leadGain.gain.linearRampToValueAtTime(0.006, start + 1.35);
+  leadGain.gain.linearRampToValueAtTime(0.025, start + 1.35);
   leadGain.gain.exponentialRampToValueAtTime(0.0001, start + 3.6);
   lead.connect(leadGain).connect(master);
   lead.start(start + 1.05);
@@ -101,8 +101,14 @@ function startLoveMusic() {
   if (!AudioContextClass) return false;
   const context = new AudioContextClass();
   const master = context.createGain();
+  const compressor = context.createDynamicsCompressor();
+  compressor.threshold.value = -18;
+  compressor.knee.value = 24;
+  compressor.ratio.value = 8;
+  compressor.attack.value = 0.012;
+  compressor.release.value = 0.25;
   master.gain.value = loveData.music.volume;
-  master.connect(context.destination);
+  master.connect(compressor).connect(context.destination);
   let index = 0;
   playLoveChord(context, master, chordSequence[index], index);
   const timer = window.setInterval(() => {

@@ -5,7 +5,7 @@ export const loveData = {
   sender: 'Trọng Nhân',
   anniversary: '28/12/2025',
   anniversaryISO: '2025-12-28T00:00:00+07:00',
-  music: { volume: 0.055 },
+  music: { volume: 0.42 },
   images: {
     hero: image('vs10.jpg'),
     heroSecondary: image('vs3.jpg'),
