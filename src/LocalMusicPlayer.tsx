@@ -1,5 +1,5 @@
-import { type CSSProperties, type RefObject, useState } from 'react';
-import { Music2, Pause, Play, Volume2 } from 'lucide-react';
+import { type CSSProperties, type RefObject, useEffect, useState } from 'react';
+import { ChevronDown, Music2, Pause, Play, Volume2 } from 'lucide-react';
 import { loveData } from './config/loveData';
 
 type Props = {
@@ -21,6 +21,13 @@ export function LocalMusicPlayer({ audioRef, opened, playing, onPlayingChange, o
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [loadError, setLoadError] = useState(false);
+  const [minimized, setMinimized] = useState(() => window.matchMedia('(max-width: 600px)').matches);
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 600px)');
+    const sync = () => setMinimized(media.matches);
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
 
   const seek = (value: number) => {
     if (!audioRef.current || !duration) return;
@@ -48,11 +55,13 @@ export function LocalMusicPlayer({ audioRef, opened, playing, onPlayingChange, o
       onDurationChange={(event) => setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)}
       onError={() => { setLoadError(true); onPlayingChange(false); }}
     />
-    {opened && <aside className={`music-player ${playing ? 'is-playing' : ''}`} aria-label="Trình phát bài Để dành cho em">
+    {opened && <aside className={`music-player ${playing ? 'is-playing' : ''} ${minimized ? 'is-minimized' : ''}`} aria-label="Trình phát bài Để dành cho em">
+      {minimized ? <button className="music-player-minimized" type="button" onClick={() => setMinimized(false)} aria-label="Mở trình phát để tua bài và chỉnh âm lượng"><Music2 size={22} /></button> : <>
       <div className="music-player-top">
         <div className="music-player-art" aria-hidden="true"><Music2 size={18} /></div>
         <div className="music-player-info"><strong>để dành cho em</strong><span>Dangrangto · DONAL</span></div>
         <button className="music-player-play" type="button" onClick={onToggle} aria-label={playing ? 'Tạm dừng nhạc' : 'Phát nhạc'}>{playing ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}</button>
+        <button className="music-player-minimize" type="button" onClick={() => setMinimized(true)} aria-label="Thu nhỏ trình phát"><ChevronDown size={16} /></button>
       </div>
       <div className="music-player-timeline">
         <span>{formatTime(currentTime)}</span>
@@ -73,6 +82,7 @@ export function LocalMusicPlayer({ audioRef, opened, playing, onPlayingChange, o
         <span>{loadError ? 'Không tải được file nhạc' : playing ? 'Đang phát xuyên suốt thiệp' : 'Chạm phát để nghe nhạc'}</span>
         <label className="music-player-volume"><Volume2 size={14} /><input type="range" min="0" max="1" step="0.01" value={volume} onChange={(event) => changeVolume(Number(event.currentTarget.value))} aria-label="Âm lượng nhạc" /></label>
       </div>
+      </>}
     </aside>}
   </>;
 }
