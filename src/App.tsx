@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import Lenis from 'lenis';
@@ -54,37 +54,104 @@ function Intro({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-function MusicToggle() {
-  const [playing, setPlaying] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  if (!loveData.audio) {
-    return <div className="music-toggle music-placeholder" aria-label="Chưa có file nhạc nền"><span className="disc"><Music2 size={14} /></span><span>Nhạc nền tuỳ chọn</span></div>;
+type LoveAudio = { context: AudioContext; master: GainNode; timer: number };
+let loveAudio: LoveAudio | null = null;
+
+const chordSequence = [
+  [261.63, 329.63, 392.0, 493.88],
+  [220.0, 261.63, 329.63, 392.0],
+  [174.61, 220.0, 261.63, 329.63],
+  [196.0, 293.66, 392.0, 440.0],
+];
+
+function playLoveChord(context: AudioContext, master: GainNode, chord: number[], index: number) {
+  const start = context.currentTime + 0.05;
+  chord.forEach((frequency, noteIndex) => {
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = noteIndex === 3 ? 'triangle' : 'sine';
+    oscillator.frequency.setValueAtTime(frequency, start);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.linearRampToValueAtTime(noteIndex === 3 ? 0.005 : 0.011, start + 0.8);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + 4.9);
+    oscillator.connect(gain).connect(master);
+    oscillator.start(start);
+    oscillator.stop(start + 5.1);
+  });
+
+  const melody = [chord[2] * 2, chord[3] * 2, chord[1] * 2, chord[2] * 2][index % 4];
+  const lead = context.createOscillator();
+  const leadGain = context.createGain();
+  lead.type = 'sine';
+  lead.frequency.setValueAtTime(melody, start + 1.05);
+  leadGain.gain.setValueAtTime(0.0001, start + 1.05);
+  leadGain.gain.linearRampToValueAtTime(0.006, start + 1.35);
+  leadGain.gain.exponentialRampToValueAtTime(0.0001, start + 3.6);
+  lead.connect(leadGain).connect(master);
+  lead.start(start + 1.05);
+  lead.stop(start + 3.8);
+}
+
+function startLoveMusic() {
+  if (loveAudio) {
+    void loveAudio.context.resume();
+    return true;
   }
-  const toggle = () => {
-    if (!audioRef.current) return;
-    if (playing) audioRef.current.pause(); else audioRef.current.play().catch(() => undefined);
-    setPlaying((state) => !state);
-  };
+  const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AudioContextClass) return false;
+  const context = new AudioContextClass();
+  const master = context.createGain();
+  master.gain.value = loveData.music.volume;
+  master.connect(context.destination);
+  let index = 0;
+  playLoveChord(context, master, chordSequence[index], index);
+  const timer = window.setInterval(() => {
+    index = (index + 1) % chordSequence.length;
+    playLoveChord(context, master, chordSequence[index], index);
+  }, 5100);
+  loveAudio = { context, master, timer };
+  return true;
+}
+
+function stopLoveMusic() {
+  if (!loveAudio) return;
+  window.clearInterval(loveAudio.timer);
+  loveAudio.master.gain.exponentialRampToValueAtTime(0.0001, loveAudio.context.currentTime + 0.35);
+  const context = loveAudio.context;
+  window.setTimeout(() => { void context.close(); }, 450);
+  loveAudio = null;
+}
+
+function MusicToggle({ playing, onToggle }: { playing: boolean; onToggle: () => void }) {
   return (
-    <>
-      <audio ref={audioRef} loop preload="none" src={loveData.audio} />
-      <button className={`music-toggle ${playing ? 'is-playing' : ''}`} onClick={toggle} aria-label={playing ? 'Tắt nhạc' : 'Bật nhạc'}>
+      <button className={`music-toggle ${playing ? 'is-playing' : ''}`} onClick={onToggle} aria-label={playing ? 'Tắt nhạc' : 'Bật nhạc'}>
         <span className="disc"><Music2 size={14} /></span><span>{playing ? 'Đang phát' : 'Bật nhạc'}</span>{playing ? <Pause size={14} /> : <Play size={14} />}
       </button>
-    </>
   );
 }
 
-function Header() {
+function Header({ musicOn, onToggleMusic }: { musicOn: boolean; onToggleMusic: () => void }) {
   return (
     <header className="site-header">
       <a className="brand" href="#top" aria-label="Về đầu trang"><span>VA</span><small>20·10</small></a>
       <nav className="nav-links" aria-label="Điều hướng chính">
         <a href="#journey">Hành trình</a><a href="#gallery">Mảnh ghép</a><a href="#letter">Lời chúc</a>
       </nav>
-      <MusicToggle />
+      <MusicToggle playing={musicOn} onToggle={onToggleMusic} />
     </header>
   );
+}
+
+function PetalRain() {
+  const petals = useMemo(() => Array.from({ length: 24 }, (_, index) => ({
+    left: `${(index * 37) % 101}%`,
+    delay: `${(index % 8) * 0.9}s`,
+    duration: `${8 + (index % 5) * 1.4}s`,
+    size: `${8 + (index % 4) * 2}px`,
+    drift: `${-70 + (index % 7) * 23}px`,
+    tint: index % 3,
+  })), []);
+  return <div className="petal-layer" aria-hidden="true">{petals.map((petal, index) => <span key={index} className={`petal petal-${petal.tint}`} style={{ '--petal-left': petal.left, '--petal-delay': petal.delay, '--petal-duration': petal.duration, '--petal-size': petal.size, '--petal-drift': petal.drift } as CSSProperties} />)}</div>;
 }
 
 function Hero() {
@@ -189,6 +256,7 @@ function Footer() { return <footer className="site-footer"><span>VA · 20.10</sp
 export default function App() {
   const [opened, setOpened] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  const [musicOn, setMusicOn] = useState(false);
   const reduce = useReducedMotion();
   const smoothRef = useRef<Lenis | null>(null);
   useEffect(() => {
@@ -201,5 +269,15 @@ export default function App() {
     return () => { cancelAnimationFrame(frame); lenis.destroy(); smoothRef.current = null; };
   }, [showIntro, reduce]);
   const pageVariants = useMemo(() => ({ initial: { opacity: 0 }, animate: { opacity: 1, transition: { duration: 0.9, delayChildren: 0.1, staggerChildren: 0.08 } } }), []);
-  return <div className="app-shell"><AnimatePresence>{showIntro && <Intro onOpen={() => { setOpened(true); setShowIntro(false); }} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><Header /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}</div>;
+  useEffect(() => () => stopLoveMusic(), []);
+  const handleOpen = () => {
+    const started = startLoveMusic();
+    setMusicOn(started);
+    setOpened(true);
+    setShowIntro(false);
+  };
+  const toggleMusic = () => {
+    if (musicOn) { stopLoveMusic(); setMusicOn(false); } else { setMusicOn(startLoveMusic()); }
+  };
+  return <div className="app-shell"><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}</div>;
 }
