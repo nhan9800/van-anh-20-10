@@ -4,7 +4,7 @@ import confetti from 'canvas-confetti';
 import Lenis from 'lenis';
 import { ArrowDown, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, Heart, MapPin, Music2, Pause, Play, Quote, Sparkles, X } from 'lucide-react';
 import { loveData } from './config/loveData';
-import { SpotifyTrackPlayer } from './SpotifyTrackPlayer';
+import { LocalMusicPlayer } from './LocalMusicPlayer';
 
 type Counter = { days: number; hours: number; minutes: number; seconds: number };
 
@@ -198,7 +198,7 @@ export default function App() {
   const [opened, setOpened] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [musicOn, setMusicOn] = useState(false);
-  const [playerVisible, setPlayerVisible] = useState(true);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const smoothRef = useRef<Lenis | null>(null);
   useEffect(() => {
     if (showIntro) return;
@@ -211,15 +211,16 @@ export default function App() {
   }, [showIntro]);
   const pageVariants = useMemo(() => ({ initial: { opacity: 0 }, animate: { opacity: 1, transition: { duration: 0.9, delayChildren: 0.1, staggerChildren: 0.08 } } }), []);
   const handleOpen = () => {
-    setMusicOn(true);
-    setPlayerVisible(true);
+    // Start inside the envelope click so mobile browsers allow sound immediately.
+    void audioRef.current?.play().catch(() => setMusicOn(false));
     setOpened(true);
     setShowIntro(false);
   };
   const toggleMusic = () => {
-    if (!playerVisible) setPlayerVisible(true);
-    setMusicOn((current) => !current);
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (audio.paused) void audio.play().catch(() => setMusicOn(false));
+    else audio.pause();
   };
-  const closePlayer = () => { setMusicOn(false); setPlayerVisible(false); };
-  return <MotionConfig reducedMotion="never"><div className="app-shell"><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}{opened && playerVisible && <SpotifyTrackPlayer playing={musicOn} onPlaybackChange={setMusicOn} onClose={closePlayer} />}</div></MotionConfig>;
+  return <MotionConfig reducedMotion="never"><div className="app-shell"><LocalMusicPlayer audioRef={audioRef} opened={opened} playing={musicOn} onPlayingChange={setMusicOn} onToggle={toggleMusic} /><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}</div></MotionConfig>;
 }

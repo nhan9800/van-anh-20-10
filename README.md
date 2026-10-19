@@ -15,6 +15,6 @@ npm run dev
 
 Mỗi lần push lên nhánh `main`, GitHub Actions sẽ tự build và cập nhật GitHub Pages.
 
-Thiệp dùng bản preview được Spotify cung cấp cho ca khúc “để dành cho em”. Người xem có thể phát/tạm dừng trong khung nhạc hoặc mở bản đầy đủ qua các liên kết chính thức. Trình duyệt có thể chặn tự phát âm thanh; khi đó hãy nhấn Play trong khung Spotify.
+Thiệp phát file MP3 “để dành cho em” do chủ website cung cấp ngay khi người xem mở thiệp. Nhạc tiếp tục khi cuộn và chuyển qua các phần, tự lặp khi hết bài. Trình phát nổi cho phép tạm dừng, phát tiếp, tua và chỉnh âm lượng. Nếu trình duyệt chặn phát âm thanh, người xem có thể nhấn nút phát trên trang.
 
 Hoa rơi và các hiệu ứng chuyển động bắt đầu khi mở thiệp trên cả desktop và mobile.
