@@ -6,6 +6,7 @@ export const loveData = {
   anniversary: '28/12/2025',
   anniversaryISO: '2025-12-28T00:00:00+07:00',
   music: { volume: 0.42 },
+  officialTrackUrl: 'https://www.youtube.com/watch?v=QxXYWMIQAcQ',
   images: {
     hero: image('vs10.jpg'),
     heroSecondary: image('vs3.jpg'),
