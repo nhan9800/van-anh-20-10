@@ -6,7 +6,6 @@ export const loveData = {
   anniversary: '28/12/2025',
   anniversaryISO: '2025-12-28T00:00:00+07:00',
   audioUrl: `${import.meta.env.BASE_URL}audio/de-danh-cho-em-dangrangto.mp3`,
-  officialTrackUrl: 'https://www.youtube.com/watch?v=QxXYWMIQAcQ',
   images: {
     hero: image('vs10.jpg'),
     heroSecondary: image('vs3.jpg'),

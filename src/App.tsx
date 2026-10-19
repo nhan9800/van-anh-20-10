@@ -2,7 +2,7 @@ import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, MotionConfig, motion, useScroll, useTransform } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import Lenis from 'lenis';
-import { ArrowDown, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, Heart, MapPin, Music2, Pause, Play, Quote, Sparkles, X } from 'lucide-react';
+import { ArrowDown, ArrowUpRight, ChevronLeft, ChevronRight, Heart, MapPin, Music2, Pause, Play, Quote, Sparkles, X } from 'lucide-react';
 import { loveData } from './config/loveData';
 import { LocalMusicPlayer } from './LocalMusicPlayer';
 
@@ -61,9 +61,6 @@ function MusicToggle({ playing, onToggle }: { playing: boolean; onToggle: () => 
       <button className={`music-toggle ${playing ? 'is-playing' : ''}`} onClick={onToggle} aria-label={playing ? 'Tắt nhạc' : 'Bật nhạc'}>
         <span className="disc"><Music2 size={14} /></span><span>{playing ? 'Đang phát' : 'Bật nhạc'}</span>{playing ? <Pause size={14} /> : <Play size={14} />}
       </button>
-      <a className="official-track" href={loveData.officialTrackUrl} target="_blank" rel="noreferrer" aria-label="Mở bản chính thức của bài Để dành cho em">
-        <ExternalLink size={13} /><span>Bản chính thức</span>
-      </a>
     </div>
   );
 }

@@ -25,9 +25,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--wine); outline-
 .nav-links a:hover, .nav-links a:focus-visible { color: var(--wine); }
 .music-toggle { display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; color: var(--muted); font-size: 10px; letter-spacing: .06em; }
 .music-actions { display: flex; align-items: center; gap: 14px; }
-.official-track { display: inline-flex; align-items: center; gap: 5px; color: var(--wine); font-size: 10px; letter-spacing: .02em; opacity: .78; transition: opacity .2s ease, transform .2s ease; }
-.official-track:hover { opacity: 1; transform: translateY(-1px); }
-.music-placeholder { cursor: default; opacity: .86; }
 .disc { display: grid; place-items: center; width: 29px; height: 29px; border: 1px solid var(--line); border-radius: 50%; color: var(--wine); background: rgba(255, 255, 255, .36); transition: transform .35s ease; }
 .is-playing .disc { animation: spin 2s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -166,7 +163,6 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--wine); outline-
 
 @media (max-width: 820px) {
   .site-header { height: 72px; }
-  .official-track { display: none; }
   .music-toggle { gap: 8px; padding: 2px 0 2px 9px; color: var(--wine); font-weight: 700; }
   .disc { width: 34px; height: 34px; }
   .hero { padding-top: 118px; padding-bottom: 38px; }

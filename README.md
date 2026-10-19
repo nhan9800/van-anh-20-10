@@ -15,6 +15,6 @@ npm run dev
 
 Mỗi lần push lên nhánh `main`, GitHub Actions sẽ tự build và cập nhật GitHub Pages.
 
-Thiệp phát file MP3 “để dành cho em” do chủ website cung cấp ngay khi người xem mở thiệp. Nhạc tiếp tục khi cuộn và chuyển qua các phần, tự lặp khi hết bài. Trình phát nổi cho phép tạm dừng, phát tiếp, tua và chỉnh âm lượng. Nếu trình duyệt chặn phát âm thanh, người xem có thể nhấn nút phát trên trang.
+Thiệp chỉ dùng một bài “để dành cho em” từ file MP3 do chủ website cung cấp. Nhạc phát khi mở thiệp, tiếp tục khi cuộn và chuyển qua các phần, rồi tự lặp khi hết bài. Trình phát nổi cho phép tạm dừng, phát tiếp, tua và chỉnh âm lượng. Nếu trình duyệt chặn phát âm thanh, người xem có thể nhấn nút phát trên trang.
 
 Hoa rơi và các hiệu ứng chuyển động bắt đầu khi mở thiệp trên cả desktop và mobile.
