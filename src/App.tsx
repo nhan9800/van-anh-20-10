@@ -4,6 +4,7 @@ import confetti from 'canvas-confetti';
 import Lenis from 'lenis';
 import { ArrowDown, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, Heart, MapPin, Music2, Pause, Play, Quote, Sparkles, X } from 'lucide-react';
 import { loveData } from './config/loveData';
+import { SpotifyTrackPlayer } from './SpotifyTrackPlayer';
 
 type Counter = { days: number; hours: number; minutes: number; seconds: number };
 
@@ -54,80 +55,6 @@ function Intro({ onOpen }: { onOpen: () => void }) {
   );
 }
 
-type LoveAudio = { context: AudioContext; master: GainNode; timer: number };
-let loveAudio: LoveAudio | null = null;
-
-const chordSequence = [
-  [261.63, 329.63, 392.0, 493.88],
-  [220.0, 261.63, 329.63, 392.0],
-  [174.61, 220.0, 261.63, 329.63],
-  [196.0, 293.66, 392.0, 440.0],
-];
-
-function playLoveChord(context: AudioContext, master: GainNode, chord: number[], index: number) {
-  const start = context.currentTime + 0.05;
-  chord.forEach((frequency, noteIndex) => {
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = noteIndex === 3 ? 'triangle' : 'sine';
-    oscillator.frequency.setValueAtTime(frequency, start);
-    gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.linearRampToValueAtTime(noteIndex === 3 ? 0.02 : 0.05, start + 0.8);
-    gain.gain.exponentialRampToValueAtTime(0.0001, start + 4.9);
-    oscillator.connect(gain).connect(master);
-    oscillator.start(start);
-    oscillator.stop(start + 5.1);
-  });
-
-  const melody = [chord[2] * 2, chord[3] * 2, chord[1] * 2, chord[2] * 2][index % 4];
-  const lead = context.createOscillator();
-  const leadGain = context.createGain();
-  lead.type = 'sine';
-  lead.frequency.setValueAtTime(melody, start + 1.05);
-  leadGain.gain.setValueAtTime(0.0001, start + 1.05);
-  leadGain.gain.linearRampToValueAtTime(0.025, start + 1.35);
-  leadGain.gain.exponentialRampToValueAtTime(0.0001, start + 3.6);
-  lead.connect(leadGain).connect(master);
-  lead.start(start + 1.05);
-  lead.stop(start + 3.8);
-}
-
-function startLoveMusic() {
-  if (loveAudio) {
-    void loveAudio.context.resume();
-    return true;
-  }
-  const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-  if (!AudioContextClass) return false;
-  const context = new AudioContextClass();
-  const master = context.createGain();
-  const compressor = context.createDynamicsCompressor();
-  compressor.threshold.value = -18;
-  compressor.knee.value = 24;
-  compressor.ratio.value = 8;
-  compressor.attack.value = 0.012;
-  compressor.release.value = 0.25;
-  master.gain.value = loveData.music.volume;
-  master.connect(compressor).connect(context.destination);
-  let index = 0;
-  playLoveChord(context, master, chordSequence[index], index);
-  const timer = window.setInterval(() => {
-    index = (index + 1) % chordSequence.length;
-    playLoveChord(context, master, chordSequence[index], index);
-  }, 5100);
-  loveAudio = { context, master, timer };
-  return true;
-}
-
-function stopLoveMusic() {
-  if (!loveAudio) return;
-  window.clearInterval(loveAudio.timer);
-  loveAudio.master.gain.exponentialRampToValueAtTime(0.0001, loveAudio.context.currentTime + 0.35);
-  const context = loveAudio.context;
-  window.setTimeout(() => { void context.close(); }, 450);
-  loveAudio = null;
-}
-
 function MusicToggle({ playing, onToggle }: { playing: boolean; onToggle: () => void }) {
   return (
     <div className="music-actions">
@@ -153,16 +80,22 @@ function Header({ musicOn, onToggleMusic }: { musicOn: boolean; onToggleMusic: (
   );
 }
 
-function PetalRain() {
-  const petals = useMemo(() => Array.from({ length: 24 }, (_, index) => ({
-    left: `${(index * 37) % 101}%`,
-    delay: `${(index % 8) * 0.9}s`,
-    duration: `${8 + (index % 5) * 1.4}s`,
-    size: `${8 + (index % 4) * 2}px`,
-    drift: `${-70 + (index % 7) * 23}px`,
-    tint: index % 3,
-  })), []);
-  return <div className="petal-layer" aria-hidden="true">{petals.map((petal, index) => <span key={index} className={`petal petal-${petal.tint}`} style={{ '--petal-left': petal.left, '--petal-delay': petal.delay, '--petal-duration': petal.duration, '--petal-size': petal.size, '--petal-drift': petal.drift } as CSSProperties} />)}</div>;
+function PetalRain({ moving }: { moving: boolean }) {
+  const petals = useMemo(() => Array.from({ length: 42 }, (_, index) => {
+    const duration = 11 + (index * 7) % 10;
+    return {
+      left: `${(index * 47.3) % 101}%`,
+      delay: `${-((index * 3.7) % duration)}s`,
+      duration: `${duration}s`,
+      size: `${index % 5 === 0 ? 25 + index % 9 : 14 + index % 11}px`,
+      drift: `${-95 + (index * 31) % 190}px`,
+      restTop: `${7 + (index * 29) % 87}vh`,
+      rotation: `${(index * 43) % 360}deg`,
+      tint: index % 3,
+      flower: index % 5 === 0,
+    };
+  }), []);
+  return <div className={`petal-layer ${moving ? 'motion-on' : 'motion-off'}`} aria-hidden="true">{petals.map((petal, index) => <span key={index} className={`falling-flower flower-${petal.tint} ${petal.flower ? 'is-blossom' : 'is-petal'}`} style={{ '--flower-left': petal.left, '--flower-delay': petal.delay, '--flower-duration': petal.duration, '--flower-size': petal.size, '--flower-drift': petal.drift, '--flower-rest-top': petal.restTop, '--flower-rotation': petal.rotation } as CSSProperties}>{petal.flower && <svg viewBox="0 0 40 40" focusable="false"><ellipse cx="20" cy="10" rx="7" ry="10" /><ellipse cx="29.5" cy="17" rx="7" ry="10" transform="rotate(72 29.5 17)" /><ellipse cx="26" cy="29" rx="7" ry="10" transform="rotate(144 26 29)" /><ellipse cx="14" cy="29" rx="7" ry="10" transform="rotate(216 14 29)" /><ellipse cx="10.5" cy="17" rx="7" ry="10" transform="rotate(288 10.5 17)" /><circle cx="20" cy="20" r="4" /></svg>}</span>)}</div>;
 }
 
 function Hero() {
@@ -268,6 +201,8 @@ export default function App() {
   const [opened, setOpened] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
   const [musicOn, setMusicOn] = useState(false);
+  const [playerVisible, setPlayerVisible] = useState(true);
+  const [flowerMotionOn, setFlowerMotionOn] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const reduce = useReducedMotion();
   const smoothRef = useRef<Lenis | null>(null);
   useEffect(() => {
@@ -280,15 +215,16 @@ export default function App() {
     return () => { cancelAnimationFrame(frame); lenis.destroy(); smoothRef.current = null; };
   }, [showIntro, reduce]);
   const pageVariants = useMemo(() => ({ initial: { opacity: 0 }, animate: { opacity: 1, transition: { duration: 0.9, delayChildren: 0.1, staggerChildren: 0.08 } } }), []);
-  useEffect(() => () => stopLoveMusic(), []);
   const handleOpen = () => {
-    const started = startLoveMusic();
-    setMusicOn(started);
+    setMusicOn(true);
+    setPlayerVisible(true);
     setOpened(true);
     setShowIntro(false);
   };
   const toggleMusic = () => {
-    if (musicOn) { stopLoveMusic(); setMusicOn(false); } else { setMusicOn(startLoveMusic()); }
+    if (!playerVisible) setPlayerVisible(true);
+    setMusicOn((current) => !current);
   };
-  return <div className="app-shell"><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}</div>;
+  const closePlayer = () => { setMusicOn(false); setPlayerVisible(false); };
+  return <div className="app-shell"><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain moving={flowerMotionOn} /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}{opened && reduce && <button className="flower-motion-control" onClick={() => setFlowerMotionOn((current) => !current)}>{flowerMotionOn ? 'Dừng hoa rơi' : 'Bật hoa rơi'}</button>}{opened && playerVisible && <SpotifyTrackPlayer playing={musicOn} onPlaybackChange={setMusicOn} onClose={closePlayer} />}</div>;
 }
