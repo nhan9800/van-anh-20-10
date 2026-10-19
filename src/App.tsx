@@ -1,4 +1,5 @@
 import { type CSSProperties, type PointerEvent, type SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, MotionConfig, motion, useMotionValue, useScroll, useSpring, useTransform } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import Lenis from 'lenis';
@@ -208,13 +209,56 @@ function Letter() {
 
 function Gift() {
   const [opened, setOpened] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!opened) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpened(false);
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        closeRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+      triggerRef.current?.focus();
+    };
+  }, [opened]);
   const launch = () => {
     setOpened(true);
     const heart = confetti.shapeFromPath({ path: 'M50 90 C35 77 8 57 8 34 C8 19 19 9 33 9 C41 9 47 13 50 20 C53 13 59 9 67 9 C81 9 92 19 92 34 C92 57 65 77 50 90 Z' });
-    confetti({ particleCount: 120, spread: 100, origin: { y: 0.7 }, colors: ['#7a1c33', '#d4af37', '#f6d4dc', '#fff7ee'], shapes: [heart, 'circle'], scalar: 1.15 });
-    window.setTimeout(() => confetti({ particleCount: 70, spread: 120, origin: { y: 0.55 }, colors: ['#7a1c33', '#e9a8ba', '#d4af37'] }), 250);
+    confetti({ particleCount: 120, spread: 100, origin: { y: 0.7 }, colors: ['#7a1c33', '#d4af37', '#f6d4dc', '#fff7ee'], shapes: [heart, 'circle'], scalar: 1.15, zIndex: 50 });
+    window.setTimeout(() => confetti({ particleCount: 70, spread: 120, origin: { y: 0.55 }, colors: ['#7a1c33', '#e9a8ba', '#d4af37'], zIndex: 50 }), 250);
   };
-  return <section className="gift-section section-pad"><div className="gift-orb orb-left" /><div className="gift-orb orb-right" /><div className="gift-inner"><p className="eyebrow light-eyebrow"><span>06</span> one last little thing</p><h3>Món quà nhỏ<br /><em>cho em.</em></h3><p>Nhấn vào đây để nhận một lời hứa mà anh muốn giữ thật lâu.</p><button className="gift-button" onClick={launch}><span>Chạm để nhận hoa từ anh</span><Heart size={18} fill="currentColor" /></button></div>{opened && <motion.div className="pass" initial={{ opacity: 0, scale: 0.85, x: '-50%', y: 'calc(-50% + 24px)', rotate: -3 }} animate={{ opacity: 1, scale: 1, x: '-50%', y: '-50%', rotate: -3 }}><button className="pass-close" onClick={() => setOpened(false)} aria-label="Đóng thẻ"><X size={18} /></button><div className="pass-mark">VA <span>♥</span></div><p className="pass-kicker">LOVE VIP PASS · 20.10.2026</p><h4>Đặc quyền<br /><em>của Vân Anh</em></h4><ul>{loveData.lovePass.map((item) => <li key={item}><Heart size={14} fill="currentColor" />{item}</li>)}</ul><div className="pass-footer"><span>issued with love</span><strong>TN · ∞</strong></div></motion.div>}</section>;
+  return <>
+    <section className="gift-section section-pad">
+      <div className="gift-orb orb-left" /><div className="gift-orb orb-right" />
+      <div className="gift-inner">
+        <p className="eyebrow light-eyebrow"><span>06</span> one last little thing</p>
+        <h3>Món quà nhỏ<br /><em>cho em.</em></h3>
+        <p>Nhấn vào đây để nhận một lời hứa mà anh muốn giữ thật lâu.</p>
+        <button className="gift-button" ref={triggerRef} onClick={launch}><span>Chạm để nhận hoa từ anh</span><Heart size={18} fill="currentColor" /></button>
+      </div>
+    </section>
+    {createPortal(<AnimatePresence>
+      {opened && <motion.div key="backdrop" className="pass-backdrop" aria-hidden="true" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} onClick={() => setOpened(false)} />}
+      {opened && <motion.div key="card" className="pass-overlay" data-lenis-prevent>
+        <motion.article className="pass" role="dialog" aria-modal="true" aria-labelledby="pass-title" initial={{ opacity: 0, scale: 0.88, y: 28, rotate: -5 }} animate={{ opacity: 1, scale: 1, y: 0, rotate: -3 }} exit={{ opacity: 0, scale: 0.94, y: 12, rotate: -4 }} transition={{ type: 'spring', stiffness: 240, damping: 23 }}>
+          <button className="pass-close" ref={closeRef} onClick={() => setOpened(false)} aria-label="Đóng thẻ" autoFocus><X size={18} /></button>
+          <div className="pass-mark">VA <span>♥</span></div>
+          <p className="pass-kicker">LOVE VIP PASS · 20.10.2026</p>
+          <h4 id="pass-title">Đặc quyền<br /><em>của Vân Anh</em></h4>
+          <ul>{loveData.lovePass.map((item) => <li key={item}><Heart size={14} fill="currentColor" />{item}</li>)}</ul>
+          <div className="pass-footer"><span>issued with love</span><strong>TN · ∞</strong></div>
+        </motion.article>
+      </motion.div>}
+    </AnimatePresence>, document.body)}
+  </>;
 }
 
 function Footer() { return <footer className="site-footer"><span>VA · 20.10</span><span>made for the girl who makes everything softer <Heart size={13} fill="currentColor" /></span><span>© 2026</span></footer>; }
