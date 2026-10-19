@@ -1,4 +1,4 @@
-import { type CSSProperties, type PointerEvent, type SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { type CSSProperties, type PointerEvent, type RefObject, type SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, MotionConfig, motion, useMotionValue, useScroll, useSpring, useTransform } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -171,9 +171,11 @@ function Journey() {
   );
 }
 
-function Gallery() {
+function Gallery({ scrollRef }: { scrollRef: RefObject<Lenis | null> }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [deckIndex, setDeckIndex] = useState(0);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const triggerRef = useRef<HTMLElement | null>(null);
   const lastSwipeAt = useRef(0);
   const pointerStartX = useRef(0);
   const pointerMoved = useRef(false);
@@ -182,12 +184,29 @@ function Gallery() {
   const previous = () => setDeckIndex((index) => (index - 1 + deck.length) % deck.length);
   useEffect(() => {
     if (!selected) return;
+    triggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const previousOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    scrollRef.current?.stop();
+    closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setSelected(null);
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        closeRef.current?.focus();
+      }
     };
     window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [selected]);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousRootOverflow;
+      scrollRef.current?.start();
+      window.removeEventListener('keydown', onKeyDown);
+      triggerRef.current?.focus();
+    };
+  }, [scrollRef, selected]);
   return (
     <section className="gallery section-pad" id="gallery">
       <div className="section-heading gallery-heading"><div><p className="eyebrow"><span>02</span> the photo studio</p><h3>Mảnh ghép<br /><em>của chúng mình.</em></h3></div><p className="heading-note">Một vài phiên bản của em mà anh muốn giữ lại thật lâu.</p></div>
@@ -198,7 +217,7 @@ function Gallery() {
         <div className="bento-note-card"><Sparkles size={21} /><p>Em là phần dịu dàng nhất trong những ngày bận rộn của anh.</p><span>✦ with love</span></div>
       </div>
       <div className="polaroid-section"><div className="polaroid-copy"><p className="eyebrow"><span>04</span> polaroid deck</p><h4>Những khung hình<br /><em>anh muốn cất.</em></h4><p>Vuốt qua từng tấm ảnh nhỏ, như lật lại một ngăn ký ức.</p></div><div className="deck-wrap"><div className="deck-shadow" /><motion.button className="polaroid-card" key={deckIndex} type="button" drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.2} initial={{ opacity: 0, x: 38, rotate: 8 }} animate={{ opacity: 1, x: 0, rotate: -5 }} transition={{ duration: 0.45 }} onPointerDown={(event) => { pointerStartX.current = event.clientX; pointerMoved.current = false; }} onPointerMove={(event) => { if (Math.abs(event.clientX - pointerStartX.current) > 15) pointerMoved.current = true; }} onDragEnd={(_, info) => { if (Math.abs(info.offset.x) < 45) return; lastSwipeAt.current = performance.now(); if (info.offset.x < 0) next(); else previous(); }} onClick={(event) => { if (event.detail === 0 || (!pointerMoved.current && performance.now() - lastSwipeAt.current > 400)) setSelected(deck[deckIndex]); }} aria-label={`Xem lớn ảnh ${deckIndex + 1}, vuốt để chuyển ảnh`}><img src={deck[deckIndex]} alt="Ảnh kỷ niệm của Vân Anh" draggable="false" onError={imageFallback} /><span>Vân Anh, always</span></motion.button><div className="deck-controls"><button onClick={previous} aria-label="Ảnh trước"><ChevronLeft size={18} /></button><span>{String(deckIndex + 1).padStart(2, '0')} / {String(deck.length).padStart(2, '0')}</span><button onClick={next} aria-label="Ảnh tiếp theo"><ChevronRight size={18} /></button></div></div></div>
-      {selected && <div className="lightbox" role="dialog" aria-modal="true" aria-label="Xem ảnh lớn" onClick={(event) => { if (event.target === event.currentTarget) setSelected(null); }}><button className="lightbox-close" onClick={() => setSelected(null)} aria-label="Đóng ảnh"><X /></button><img src={selected} alt="Khoảnh khắc phóng to" onError={imageFallback} /></div>}
+      {selected && createPortal(<div className="lightbox" role="dialog" aria-modal="true" aria-label="Xem ảnh lớn" data-lenis-prevent onClick={(event) => { if (event.target === event.currentTarget) setSelected(null); }}><button className="lightbox-close" ref={closeRef} onClick={() => setSelected(null)} aria-label="Đóng ảnh"><X /></button><img src={selected} alt="Khoảnh khắc phóng to" onError={imageFallback} /></div>, document.body)}
     </section>
   );
 }
@@ -207,14 +226,17 @@ function Letter() {
   return <section className="letter-section section-pad" id="letter"><div className="letter-top"><p className="eyebrow"><span>05</span> a note, in my handwriting</p><p>Gửi em, từ nơi anh luôn nghĩ về em.</p></div><motion.article className="letter-card" initial={{ opacity: 0, y: 34, rotate: 1 }} whileInView={{ opacity: 1, y: 0, rotate: -1 }} viewport={{ once: true, amount: 0.3 }} transition={{ duration: 0.8 }}><div className="letter-heart">♡</div><div className="letter-lines">{loveData.wishes.map((line, i) => <motion.p key={line} initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 + i * 0.16 }}>{line}</motion.p>)}</div><div className="letter-sign"><span>thương em,</span><strong>Trọng Nhân</strong></div><div className="letter-doodle doodle-one">✦</div><div className="letter-doodle doodle-two">♡</div></motion.article></section>;
 }
 
-function Gift() {
+function Gift({ scrollRef }: { scrollRef: RefObject<Lenis | null> }) {
   const [opened, setOpened] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (!opened) return;
     const previousOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
+    document.documentElement.style.overflow = 'hidden';
+    scrollRef.current?.stop();
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setOpened(false);
       if (event.key === 'Tab') {
@@ -225,10 +247,12 @@ function Gift() {
     window.addEventListener('keydown', closeOnEscape);
     return () => {
       document.body.style.overflow = previousOverflow;
+      document.documentElement.style.overflow = previousRootOverflow;
+      scrollRef.current?.start();
       window.removeEventListener('keydown', closeOnEscape);
       triggerRef.current?.focus();
     };
-  }, [opened]);
+  }, [opened, scrollRef]);
   const launch = () => {
     setOpened(true);
     const heart = confetti.shapeFromPath({ path: 'M50 90 C35 77 8 57 8 34 C8 19 19 9 33 9 C41 9 47 13 50 20 C53 13 59 9 67 9 C81 9 92 19 92 34 C92 57 65 77 50 90 Z' });
@@ -291,5 +315,5 @@ export default function App() {
     if (audio.paused) void audio.play().catch(() => setMusicOn(false));
     else audio.pause();
   };
-  return <MotionConfig reducedMotion="never"><div className="app-shell"><LocalMusicPlayer audioRef={audioRef} opened={opened} playing={musicOn} onPlayingChange={setMusicOn} onToggle={toggleMusic} /><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}</div></MotionConfig>;
+  return <MotionConfig reducedMotion="never"><div className="app-shell"><LocalMusicPlayer audioRef={audioRef} opened={opened} playing={musicOn} onPlayingChange={setMusicOn} onToggle={toggleMusic} /><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery scrollRef={smoothRef} /><Letter /><Gift scrollRef={smoothRef} /></main><Footer /></motion.div>}</div></MotionConfig>;
 }
