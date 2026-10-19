@@ -17,4 +17,4 @@ Mỗi lần push lên nhánh `main`, GitHub Actions sẽ tự build và cập nh
 
 Thiệp dùng bản preview được Spotify cung cấp cho ca khúc “để dành cho em”. Người xem có thể phát/tạm dừng trong khung nhạc hoặc mở bản đầy đủ qua các liên kết chính thức. Trình duyệt có thể chặn tự phát âm thanh; khi đó hãy nhấn Play trong khung Spotify.
 
-Hoa rơi bắt đầu khi mở thiệp. Nếu thiết bị bật chế độ giảm chuyển động, trang hiển thị hoa tĩnh và có nút “Bật hoa rơi” để người xem tự chọn hiệu ứng.
+Hoa rơi và các hiệu ứng chuyển động bắt đầu khi mở thiệp trên cả desktop và mobile.

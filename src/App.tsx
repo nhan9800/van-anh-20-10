@@ -1,5 +1,5 @@
 import { type CSSProperties, useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
+import { AnimatePresence, MotionConfig, motion, useScroll, useTransform } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import Lenis from 'lenis';
 import { ArrowDown, ArrowUpRight, ChevronLeft, ChevronRight, ExternalLink, Heart, MapPin, Music2, Pause, Play, Quote, Sparkles, X } from 'lucide-react';
@@ -80,7 +80,7 @@ function Header({ musicOn, onToggleMusic }: { musicOn: boolean; onToggleMusic: (
   );
 }
 
-function PetalRain({ moving }: { moving: boolean }) {
+function PetalRain() {
   const petals = useMemo(() => Array.from({ length: 42 }, (_, index) => {
     const duration = 11 + (index * 7) % 10;
     return {
@@ -89,21 +89,18 @@ function PetalRain({ moving }: { moving: boolean }) {
       duration: `${duration}s`,
       size: `${index % 5 === 0 ? 25 + index % 9 : 14 + index % 11}px`,
       drift: `${-95 + (index * 31) % 190}px`,
-      restTop: `${7 + (index * 29) % 87}vh`,
-      rotation: `${(index * 43) % 360}deg`,
       tint: index % 3,
       flower: index % 5 === 0,
     };
   }), []);
-  return <div className={`petal-layer ${moving ? 'motion-on' : 'motion-off'}`} aria-hidden="true">{petals.map((petal, index) => <span key={index} className={`falling-flower flower-${petal.tint} ${petal.flower ? 'is-blossom' : 'is-petal'}`} style={{ '--flower-left': petal.left, '--flower-delay': petal.delay, '--flower-duration': petal.duration, '--flower-size': petal.size, '--flower-drift': petal.drift, '--flower-rest-top': petal.restTop, '--flower-rotation': petal.rotation } as CSSProperties}>{petal.flower && <svg viewBox="0 0 40 40" focusable="false"><ellipse cx="20" cy="10" rx="7" ry="10" /><ellipse cx="29.5" cy="17" rx="7" ry="10" transform="rotate(72 29.5 17)" /><ellipse cx="26" cy="29" rx="7" ry="10" transform="rotate(144 26 29)" /><ellipse cx="14" cy="29" rx="7" ry="10" transform="rotate(216 14 29)" /><ellipse cx="10.5" cy="17" rx="7" ry="10" transform="rotate(288 10.5 17)" /><circle cx="20" cy="20" r="4" /></svg>}</span>)}</div>;
+  return <div className="petal-layer" aria-hidden="true">{petals.map((petal, index) => <span key={index} className={`falling-flower flower-${petal.tint} ${petal.flower ? 'is-blossom' : 'is-petal'}`} style={{ '--flower-left': petal.left, '--flower-delay': petal.delay, '--flower-duration': petal.duration, '--flower-size': petal.size, '--flower-drift': petal.drift } as CSSProperties}>{petal.flower && <svg viewBox="0 0 40 40" focusable="false"><ellipse cx="20" cy="10" rx="7" ry="10" /><ellipse cx="29.5" cy="17" rx="7" ry="10" transform="rotate(72 29.5 17)" /><ellipse cx="26" cy="29" rx="7" ry="10" transform="rotate(144 26 29)" /><ellipse cx="14" cy="29" rx="7" ry="10" transform="rotate(216 14 29)" /><ellipse cx="10.5" cy="17" rx="7" ry="10" transform="rotate(288 10.5 17)" /><circle cx="20" cy="20" r="4" /></svg>}</span>)}</div>;
 }
 
 function Hero() {
-  const reduce = useReducedMotion();
   const heroRef = useRef<HTMLDivElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
-  const imageY = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : 90]);
-  const imageRotate = useTransform(scrollYProgress, [0, 1], [3, reduce ? 3 : -3]);
+  const imageY = useTransform(scrollYProgress, [0, 1], [0, 90]);
+  const imageRotate = useTransform(scrollYProgress, [0, 1], [3, -3]);
   return (
     <section className="hero section-pad" id="top" ref={heroRef}>
       <div className="hero-copy">
@@ -202,18 +199,16 @@ export default function App() {
   const [showIntro, setShowIntro] = useState(true);
   const [musicOn, setMusicOn] = useState(false);
   const [playerVisible, setPlayerVisible] = useState(true);
-  const [flowerMotionOn, setFlowerMotionOn] = useState(() => !window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const reduce = useReducedMotion();
   const smoothRef = useRef<Lenis | null>(null);
   useEffect(() => {
-    if (showIntro || reduce) return;
+    if (showIntro) return;
     const lenis = new Lenis({ duration: 1.05, smoothWheel: true });
     smoothRef.current = lenis;
     let frame = 0;
     const raf = (time: number) => { lenis.raf(time); frame = requestAnimationFrame(raf); };
     frame = requestAnimationFrame(raf);
     return () => { cancelAnimationFrame(frame); lenis.destroy(); smoothRef.current = null; };
-  }, [showIntro, reduce]);
+  }, [showIntro]);
   const pageVariants = useMemo(() => ({ initial: { opacity: 0 }, animate: { opacity: 1, transition: { duration: 0.9, delayChildren: 0.1, staggerChildren: 0.08 } } }), []);
   const handleOpen = () => {
     setMusicOn(true);
@@ -226,5 +221,5 @@ export default function App() {
     setMusicOn((current) => !current);
   };
   const closePlayer = () => { setMusicOn(false); setPlayerVisible(false); };
-  return <div className="app-shell"><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain moving={flowerMotionOn} /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}{opened && reduce && <button className="flower-motion-control" onClick={() => setFlowerMotionOn((current) => !current)}>{flowerMotionOn ? 'Dừng hoa rơi' : 'Bật hoa rơi'}</button>}{opened && playerVisible && <SpotifyTrackPlayer playing={musicOn} onPlaybackChange={setMusicOn} onClose={closePlayer} />}</div>;
+  return <MotionConfig reducedMotion="never"><div className="app-shell"><AnimatePresence>{showIntro && <Intro onOpen={handleOpen} />}</AnimatePresence>{opened && <motion.div variants={pageVariants} initial="initial" animate="animate" className="page"><PetalRain /><Header musicOn={musicOn} onToggleMusic={toggleMusic} /><main><Hero /><Journey /><Gallery /><Letter /><Gift /></main><Footer /></motion.div>}{opened && playerVisible && <SpotifyTrackPlayer playing={musicOn} onPlaybackChange={setMusicOn} onClose={closePlayer} />}</div></MotionConfig>;
 }

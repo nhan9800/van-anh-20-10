@@ -15,15 +15,20 @@ type SpotifyApi = {
 declare global {
   interface Window {
     onSpotifyIframeApiReady?: (api: SpotifyApi) => void;
+    __vanAnhSpotifyApi?: SpotifyApi;
   }
 }
 
 let spotifyApiPromise: Promise<SpotifyApi> | null = null;
 
 function loadSpotifyApi() {
+  if (window.__vanAnhSpotifyApi) return Promise.resolve(window.__vanAnhSpotifyApi);
   if (!spotifyApiPromise) {
     spotifyApiPromise = new Promise<SpotifyApi>((resolve, reject) => {
-      window.onSpotifyIframeApiReady = resolve;
+      window.onSpotifyIframeApiReady = (api) => {
+        window.__vanAnhSpotifyApi = api;
+        resolve(api);
+      };
       const script = document.createElement('script');
       script.src = 'https://open.spotify.com/embed/iframe-api/v1';
       script.async = true;
@@ -59,7 +64,7 @@ export function SpotifyTrackPlayer({ playing, onPlaybackChange, onClose }: { pla
       if (disposed) return;
       const mountPoint = document.createElement('div');
       container.appendChild(mountPoint);
-      api.createController(mountPoint, { uri: `spotify:track:${loveData.spotifyTrackId}`, width: '100%', height: 152 }, (controller) => {
+      api.createController(mountPoint, { uri: `spotify:track:${loveData.spotifyTrackId}`, width: '100%', height: 80 }, (controller) => {
         if (disposed) { controller.destroy(); return; }
         controllerRef.current = controller;
         controller.addListener('ready', () => {
